@@ -1,0 +1,76 @@
+/*
+q1
+
+create or replace procedure registe_course(sid student.id%type, 
+										  cid course.course_id%type,
+										 secid section.sec_id%type,
+										 sem section.semester%type,
+										 y section.year%type)
+as
+$$
+begin
+	if cid not in (select course_id from takes
+			  	where id = sid and (grade <> 'F' or grade is null )) then
+		insert into takes values(sid, cid, secid, sem, y, null);
+	else 
+		raise EXCEPTION 'The course is passed before';
+	end if;
+end;
+$$
+language plpgsql;
+
+call registe_course('00128', 'CS-190','2', 'Spring', '2017');
+*/
+
+/*
+q2
+*/
+/*
+create or replace function add_section_func()
+returns trigger as
+$$
+begin
+	if new.time_slot_id in (select time_slot_id from section 
+							where semester = new.semester and year = new.year 
+							and building = new.building and room_number=new.room_number) then
+			    raise notice 'The class at that time-slot is occupied!';
+				return null;
+	end if;
+	return new;
+end;
+$$
+language plpgsql;
+
+create or replace trigger section_add before insert or update of time_slot_id on section
+for each row execute procedure add_section_func();
+
+/*
+insert into section 
+values ('BIO-101', '2', 'Summer', '2017', 'Painter', '514', 'D');
+*/
+
+
+update section
+set time_slot_id = 'C'
+where course_id='BIO-301' and sec_id = '1' and semester = 'Summer'
+and  year = '2017';
+
+
+select * from section
+where year = 2017 and semester = 'Summer'  and building='Painter' and room_number = '514'
+
+*/
+
+/* q3
+*/
+with recursive rec_prereq(course_id) as
+	(select p.prereq_id from prereq p
+	where p.course_id = 'CS-190'
+	union 
+	select prereq_id from prereq,rec_prereq
+	where prereq.course_id = rec_prereq.course_id)
+	select * from rec_prereq natural join course 
+	natural left outer join 
+	(select course_id,grade 
+	 				from takes where id = '00128') as take_st
+
